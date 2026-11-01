@@ -68,3 +68,9 @@ target/
 # Datasets
 data/
 test/
+# SEV2MOD training outputs
+runs/
+
+# Track data-interface tests despite the upstream data/ ignore pattern
+!tests/data/
+!tests/data/**

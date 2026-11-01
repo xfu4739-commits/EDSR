@@ -28,8 +28,14 @@ class EDSR(nn.Module):
             self.url = url[url_name]
         else:
             self.url = None
-        self.sub_mean = common.MeanShift(args.rgb_range)
-        self.add_mean = common.MeanShift(args.rgb_range, sign=1)
+        if getattr(args, "shift_mean", True):
+            if args.n_colors != 3:
+                raise ValueError("RGB MeanShift requires n_colors=3; disable shift_mean for scientific bands")
+            self.sub_mean = common.MeanShift(args.rgb_range)
+            self.add_mean = common.MeanShift(args.rgb_range, sign=1)
+        else:
+            self.sub_mean = nn.Identity()
+            self.add_mean = nn.Identity()
 
         # define head module
         m_head = [conv(args.n_colors, n_feats, kernel_size)]
@@ -65,21 +71,5 @@ class EDSR(nn.Module):
         return x 
 
     def load_state_dict(self, state_dict, strict=True):
-        own_state = self.state_dict()
-        for name, param in state_dict.items():
-            if name in own_state:
-                if isinstance(param, nn.Parameter):
-                    param = param.data
-                try:
-                    own_state[name].copy_(param)
-                except Exception:
-                    if name.find('tail') == -1:
-                        raise RuntimeError('While copying the parameter named {}, '
-                                           'whose dimensions in the model are {} and '
-                                           'whose dimensions in the checkpoint are {}.'
-                                           .format(name, own_state[name].size(), param.size()))
-            elif strict:
-                if name.find('tail') == -1:
-                    raise KeyError('unexpected key "{}" in state_dict'
-                                   .format(name))
-
+        # Never silently ignore incompatible reconstruction-head parameters.
+        return super().load_state_dict(state_dict, strict=strict)

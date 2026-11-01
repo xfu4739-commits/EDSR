@@ -72,6 +72,17 @@ class Upsampler(nn.Sequential):
                 elif act == 'prelu':
                     m.append(nn.PReLU(n_feats))
 
+        elif scale == 12:
+            # One jointly trained reconstruction head: x2 -> x2 -> x3.
+            for factor in (2, 2, 3):
+                m.append(conv(n_feats, factor * factor * n_feats, 3, bias))
+                m.append(nn.PixelShuffle(factor))
+                if bn:
+                    m.append(nn.BatchNorm2d(n_feats))
+                if act == 'relu':
+                    m.append(nn.ReLU(True))
+                elif act == 'prelu':
+                    m.append(nn.PReLU(n_feats))
         elif scale == 3:
             m.append(conv(n_feats, 9 * n_feats, 3, bias))
             m.append(nn.PixelShuffle(3))
